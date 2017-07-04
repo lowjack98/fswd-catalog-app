@@ -6,7 +6,7 @@ from flask import session as login_session
 from functools import wraps
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 import httplib2
 import json
@@ -176,12 +176,10 @@ def showCategories():
 
 
 @app.route('/catalog/new', methods=['GET', 'POST'])
+@login_required
 def createCategory():
     # Show add form for GET
     # Add record on POST
-    if 'credentials' not in login_session:
-        flash("You must be logged in to create categories!", "alert-danger")
-        return redirect(url_for('showCategories'))
     if request.method == 'POST':
         # redirect to home add status
         newCat = Category(name=request.form['catTitle'],
@@ -195,12 +193,10 @@ def createCategory():
 
 
 @app.route('/catalog/<int:category_id>/edit', methods=['GET', 'POST'])
+@login_required
 def updateCategory(category_id):
     # Show update form for GET
     # Update record on POST
-    if 'credentials' not in login_session:
-        flash("You must be logged in to update categories!", "alert-danger")
-        return redirect(url_for('showCategories'))
     editedCat = session.query(Category).filter_by(id=category_id).one()
     if request.method == 'POST':
         if request.form['catTitle']:
@@ -217,12 +213,10 @@ def updateCategory(category_id):
 
 
 @app.route('/catalog/<int:category_id>/delete', methods=['GET', 'POST'])
+@login_required
 def deleteCategory(category_id):
     # Show delete form for GET
     # Remove record on POST
-    if 'credentials' not in login_session:
-        flash("You must be logged in to delete categories!", "alert-danger")
-        return redirect(url_for('showCategories'))
     deletedCat = session.query(Category).filter_by(id=category_id).one()
     if request.method == 'POST':
         session.delete(deletedCat)
@@ -230,8 +224,10 @@ def deleteCategory(category_id):
         flash("category removed!", "alert-success")
         return redirect(url_for('showCategories'))
     else:
+        itemCnt = session.query(func.count(CatItem.id)).\
+                          filter_by(category_id=category_id).scalar()
         return render_template('catdelete.html', category=deletedCat,
-                               user=login_session)
+                               user=login_session, item_cnt=itemCnt)
 
 
 @app.route('/catalog/<int:category_id>')
@@ -253,12 +249,10 @@ def showCatItemDetail(category_id, item_id):
 
 
 @app.route('/catalog/<int:category_id>/items/new', methods=['GET', 'POST'])
+@login_required
 def createCatItem(category_id):
     # Show add form for GET
     # Add record on POST
-    if 'credentials' not in login_session:
-        flash("You must be logged in to create items!", "alert-danger")
-        return redirect(url_for('showCatItems', category_id=category_id))
     categories = session.query(Category).all()
     if request.method == 'POST':
         newCatItem = CatItem(name=request.form['itemName'],
@@ -276,12 +270,10 @@ def createCatItem(category_id):
 
 @app.route('/catalog/<int:category_id>/items/<int:item_id>/edit',
            methods=['GET', 'POST'])
+@login_required
 def editCatItem(category_id, item_id):
     # Show update form for GET
     # Update record on POST
-    if 'credentials' not in login_session:
-        flash("You must be logged in to edit items!", "alert-danger")
-        return redirect(url_for('showCatItems', category_id=category_id))
     categories = session.query(Category).all()
     updatedCatItem = session.query(CatItem).filter_by(id=item_id).one()
     if request.method == 'POST':
@@ -304,12 +296,10 @@ def editCatItem(category_id, item_id):
 
 @app.route('/catalog/<int:category_id>/items/<int:item_id>/delete',
            methods=['GET', 'POST'])
+@login_required
 def deleteCatItem(category_id, item_id):
     # Show delete form for GET
     # Remove record on POST
-    if 'credentials' not in login_session:
-        flash("You must be logged in to delete items!", "alert-danger")
-        return redirect(url_for('showCatItems', category_id=category_id))
     deletedCatItem = session.query(CatItem).filter_by(id=item_id).one()
     if request.method == 'POST':
         session.delete(deletedCatItem)
